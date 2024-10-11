@@ -1,0 +1,101 @@
+import tika
+from tika import parser
+import spacy
+from spacy import displacy
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+import multiprocessing
+import os
+import time
+
+# Initialize Tika for OCR
+tika.initVM()
+
+# Load SpaCy's pre-trained NER model
+nlp = spacy.load("en_core_web_sm")
+
+GROUND_TRUTH = {
+    "resume1.pdf": {"name": "likith vishal", "email": "likithvishal@gmail.com"},
+    "resume2.pdf": {"name": "Liki vish", "email": "likithvishal20@gmail.com"},
+   
+}
+
+def extract_text_from_pdf(file_path):
+    raw = parser.from_file(file_path)
+    return raw['content']
+
+def process_resume(text)
+    # Parse the text using SpaCy
+    doc = nlp(text)
+    
+    # Tokenization, lemmatization, POS tagging, and stopword removal
+    tokens = [(token.text, token.lemma_, token.pos_, token.is_stop) for token in doc]
+
+    # Named Entity Recognition (NER)
+    entities = {ent.label_: ent.text for ent in doc.ents}
+    
+    return tokens, entities
+
+def visualize_entities(doc):
+    displacy.render(doc, style="ent", jupyter=True)
+
+def calculate_entity_accuracy(entities, ground_truth):
+    correct_entities = sum(entities.get(label) == ground_truth.get(label) for label in ground_truth)
+    total_entities = len(ground_truth)
+    accuracy = correct_entities / total_entities if total_entities > 0 else 0
+    return accuracy
+
+def process_resume_file(file_path, ground_truth):
+    # Extract text from the resume
+    text = extract_text_from_pdf(file_path)
+    
+    # Process the text (tokenization, lemmatization, POS tagging, NER)
+    tokens, entities = process_resume(text)
+
+    # Calculate extraction accuracy based on ground truth
+    accuracy = calculate_entity_accuracy(entities, ground_truth)
+    
+    # Print tokens, entities, and accuracy
+    print(f"Resume: {file_path}")
+    print("Tokens (word, lemma, POS, stopword):")
+    for token in tokens:
+        print(token)
+    
+    print("\nNamed Entities:")
+    for label, entity in entities.items():
+        print(f"{label}: {entity}")
+    
+    print(f"\nExtraction Accuracy: {accuracy * 100:.2f}%\n")
+    
+    # Visualize entities
+    doc = nlp(text)
+    visualize_entities(doc)
+    
+    return accuracy
+
+def parallel_resume_processing(file_paths):
+    ground_truths = [GROUND_TRUTH.get(os.path.basename(file), {}) for file in file_paths]
+    
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        accuracies = pool.starmap(process_resume_file, zip(file_paths, ground_truths))
+    
+    return accuracies
+
+def measure_processing_speed(file_paths):
+    start_time = time.time()
+    parallel_resume_processing(file_paths)
+    end_time = time.time()
+    
+    total_time = end_time - start_time
+    resumes_per_hour = (len(file_paths) / total_time) * 3600
+    
+    print(f"Processed {len(file_paths)} resumes in {total_time:.2f} seconds.")
+    print(f"Speed: {resumes_per_hour:.2f} resumes per hour.")
+
+# Test the parser with a batch of resumes
+file_paths = ["resume1.pdf", "resume2.pdf"]  # Replace with actual resume paths
+measure_processing_speed(file_paths)
+
+# Calculate average accuracy for the batch
+accuracies = parallel_resume_processing(file_paths)
+average_accuracy = sum(accuracies) / len(accuracies)
+print(f"\nAverage Extraction Accuracy: {average_accuracy * 100:.2f}%")
