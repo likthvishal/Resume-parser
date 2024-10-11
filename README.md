@@ -1,5 +1,6 @@
 # Resume-parser
-Explanation of Key Features
+
+### Explanation of Key Features
 
 Extraction Accuracy (95%):
 The code calculates the accuracy of entity extraction by comparing the results against a predefined ground truth (calculate_entity_accuracy). You can expand this by adding more detailed ground truth data.
